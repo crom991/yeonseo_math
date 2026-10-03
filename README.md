@@ -2,6 +2,11 @@
 
 초등학교 5학년 학습자가 모바일에서 하루 약 10분씩 기초 연산을 연습하는 Streamlit 웹앱입니다. 한 화면에 한 문제만 보여 주며, 연습을 마치면 점수·시간·체감 난이도를 저장하고 부모에게 Telegram으로 보낼 수 있습니다.
 
+## 공개 서비스
+
+- 웹앱: <https://yeonseo-math.streamlit.app>
+- GitHub: <https://github.com/crom991/yeonseo_math>
+
 ## 핵심 기능
 
 - 두 자리 수 덧셈에서 시작해 뺄셈·곱셈·나눗셈·소수·분수로 확장하는 17단계

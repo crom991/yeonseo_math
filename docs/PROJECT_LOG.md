@@ -84,7 +84,11 @@
 
 - 로컬 구현·자동 검증·모바일 및 부모 화면 확인 완료
 - 기능 커밋 생성: `1e17de52a557f22e7b01a252f5be6d218244dabc`
+- 공개 GitHub 저장소 생성: <https://github.com/crom991/yeonseo_math>
+- 로컬 `HEAD`와 GitHub `main`이 `92e3d958b1706f9086ee7c3713aaa98a05d26473`으로 일치하는지 확인
+- Streamlit Community Cloud 공개 배포 완료: <https://yeonseo-math.streamlit.app>
+- 공개 주소에서 시작 화면과 첫 덧셈 문제 표시 확인
+- 공개 부모 페이지는 `PARENT_PIN` 미등록 안내와 함께 잠긴 상태임을 확인
 - 실제 Telegram 발송은 운영 Secret이 아직 이 앱에 등록되지 않아 미확인
 - 운영 장기 저장은 Supabase 프로젝트와 Secret 등록 전이므로 현재 로컬 저장 대체 모드
-- GitHub 원격 반영 및 Streamlit 재배포는 로그인 후 진행 필요
-- 운영 배포 뒤 실제 Telegram 수신, Supabase 기록 보존, 모바일 재확인을 별도로 기록한다.
+- 다음 운영 작업은 부모 PIN과 Supabase 설정이며, Telegram 전송은 사용자 요청에 따라 나중에 연결한다.

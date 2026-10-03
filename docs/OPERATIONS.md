@@ -1,5 +1,14 @@
 # 운영 및 배포
 
+## 현재 운영 주소
+
+- Streamlit: <https://yeonseo-math.streamlit.app>
+- GitHub: <https://github.com/crom991/yeonseo_math>
+- 배포 기준: `main` 브랜치의 `app.py`
+- 최초 공개 배포 확인: 2026-10-04
+
+현재 Telegram, 부모 PIN, Supabase Secret은 등록하지 않았다. 따라서 아이용 연산 화면은 사용할 수 있지만 Telegram 전송은 비활성화되고, 부모 화면은 잠기며, 학습 기록은 Streamlit 서버 재시작 후 사라질 수 있다.
+
 ## 구성
 
 - `app.py`: 아이용 10분 학습과 결과·Telegram 전송
