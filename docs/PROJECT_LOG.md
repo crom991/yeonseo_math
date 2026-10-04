@@ -92,3 +92,10 @@
 - 실제 Telegram 발송은 운영 Secret이 아직 이 앱에 등록되지 않아 미확인
 - 운영 장기 저장은 Supabase 프로젝트와 Secret 등록 전이므로 현재 로컬 저장 대체 모드
 - 다음 운영 작업은 부모 PIN과 Supabase 설정이며, Telegram 전송은 사용자 요청에 따라 나중에 연결한다.
+
+### 부모 PIN 운영 설정
+
+- Streamlit Secrets에 `PARENT_PIN` 등록 완료(값은 문서와 Git에 기록하지 않음)
+- 공개 부모 페이지에서 PIN 인증 후 날짜별 학습 기록과 난이도 설정 화면 진입 확인
+- 검증 뒤 로그아웃하여 부모 페이지가 다시 PIN 입력 화면으로 잠기는 것 확인
+- Supabase와 Telegram Secret은 아직 등록하지 않았으며 기존 보류 상태 유지

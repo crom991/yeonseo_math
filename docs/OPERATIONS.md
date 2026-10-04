@@ -7,7 +7,7 @@
 - 배포 기준: `main` 브랜치의 `app.py`
 - 최초 공개 배포 확인: 2026-10-04
 
-현재 Telegram, 부모 PIN, Supabase Secret은 등록하지 않았다. 따라서 아이용 연산 화면은 사용할 수 있지만 Telegram 전송은 비활성화되고, 부모 화면은 잠기며, 학습 기록은 Streamlit 서버 재시작 후 사라질 수 있다.
+현재 `PARENT_PIN`은 Streamlit Secrets에 등록했다. Telegram과 Supabase Secret은 아직 등록하지 않았다. 따라서 부모 화면 인증은 사용할 수 있지만 Telegram 전송은 비활성화되고, 학습 기록은 Streamlit 서버 재시작 후 사라질 수 있다. PIN 값은 문서와 Git에 기록하지 않는다.
 
 ## 구성
 
