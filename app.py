@@ -56,7 +56,7 @@ st.markdown(
         background: linear-gradient(180deg, #fffaf0 0%, #f0f9ff 100%);
     }
     [data-testid="stHeader"] { background: transparent; }
-    .block-container { max-width: 560px; padding: 1rem 1rem 3rem; }
+    .block-container { max-width: 560px; padding: .65rem 1rem 2rem; }
     .hero { padding: 1.2rem 0 .4rem; text-align: center; }
     .hero h1 {
         color: #183153;
@@ -69,8 +69,8 @@ st.markdown(
         border: 1px solid #dbeafe;
         border-radius: 24px;
         box-shadow: 0 12px 32px rgba(30, 64, 175, .08);
-        margin: .8rem 0 1rem;
-        padding: 2rem 1rem;
+        margin: .45rem 0 .7rem;
+        padding: 1.25rem .75rem;
         text-align: center;
     }
     .level-label { color: #64748b; font-size: .9rem; font-weight: 700; }
@@ -80,12 +80,12 @@ st.markdown(
         font-weight: 800;
         letter-spacing: .02em;
         line-height: 1.25;
-        margin-top: .5rem;
+        margin-top: .3rem;
     }
     .feedback {
         border-radius: 16px;
-        margin: .5rem 0 1rem;
-        padding: .8rem 1rem;
+        margin: .35rem 0 .55rem;
+        padding: .65rem 1rem;
         text-align: center;
         font-weight: 700;
     }
@@ -106,6 +106,37 @@ st.markdown(
         min-height: 64px;
         border-radius: 16px;
     }
+    [data-testid="stNumberInputContainer"] {
+        min-height: 64px;
+    }
+    div[data-testid="stNumberInput"] input::placeholder,
+    div[data-testid="stTextInput"] input::placeholder {
+        font-size: 1.25rem;
+    }
+    [data-testid="stNumberInputStepDown"],
+    [data-testid="stNumberInputStepUp"],
+    [data-testid="InputInstructions"] {
+        display: none !important;
+    }
+    div[data-testid="stForm"] {
+        background: transparent;
+        border: 0;
+        padding: 0;
+    }
+    div[data-testid="stForm"] [data-testid="stHorizontalBlock"] {
+        align-items: flex-end;
+        flex-wrap: nowrap;
+        gap: .55rem;
+    }
+    div[data-testid="stForm"] [data-testid="stColumn"] {
+        min-width: 0 !important;
+    }
+    div[data-testid="stForm"] div[data-testid="stFormSubmitButton"] button {
+        min-height: 64px;
+        padding-left: .7rem;
+        padding-right: .7rem;
+        white-space: nowrap;
+    }
     div[data-testid="stFormSubmitButton"] button,
     div[data-testid="stButton"] button,
     div[data-testid="stPageLink"] a {
@@ -116,8 +147,12 @@ st.markdown(
         width: 100%;
     }
     @media (max-width: 480px) {
-        .block-container { padding-top: .35rem; }
-        .question-card { padding: 1.5rem .7rem; }
+        .block-container { padding: .2rem .75rem 1.5rem; }
+        .question-card { padding: 1rem .55rem; }
+        .problem { font-size: clamp(2.5rem, 13vw, 4rem); }
+        div[data-testid="stNumberInput"] input::placeholder,
+        div[data-testid="stTextInput"] input::placeholder { font-size: 1.1rem; }
+        div[data-testid="stFormSubmitButton"] button { font-size: .95rem; }
     }
     </style>
     """,
@@ -249,11 +284,10 @@ def render_timer() -> None:
     remaining = remaining_seconds()
     minutes, seconds = divmod(remaining, 60)
     progress = 1 - remaining / SESSION_SECONDS
-    left, right = st.columns([2, 1])
-    with left:
-        st.progress(progress, text=f"오늘 연습 {int(progress * 100)}%")
-    with right:
-        st.markdown(f"**남은 시간 {minutes}:{seconds:02d}**")
+    st.progress(
+        progress,
+        text=f"오늘 연습 {int(progress * 100)}% · 남은 시간 {minutes}:{seconds:02d}",
+    )
     if remaining <= 0:
         finish_session()
         st.rerun()
@@ -309,6 +343,7 @@ def render_answer_input(problem: Problem, key: str):
             key=key,
             placeholder="예: 3/4",
             autocomplete="off",
+            label_visibility="collapsed",
         )
     if problem.answer_kind == "decimal":
         value = st.number_input(
@@ -318,6 +353,7 @@ def render_answer_input(problem: Problem, key: str):
             step=0.1,
             format="%.1f",
             placeholder="예: 4.2",
+            label_visibility="collapsed",
         )
     else:
         value = st.number_input(
@@ -326,7 +362,8 @@ def render_answer_input(problem: Problem, key: str):
             value=None,
             step=1,
             format="%d",
-            placeholder="답을 숫자로 적어 주세요",
+            placeholder="답을 숫자로 적어 보세요",
+            label_visibility="collapsed",
         )
     return "" if value is None else str(value)
 
@@ -352,8 +389,15 @@ def render_quiz() -> None:
 
     key = f"answer_{st.session_state.question_number}"
     with st.form(key=f"form_{key}", clear_on_submit=True):
-        answer_text = render_answer_input(problem, key)
-        submitted = st.form_submit_button("정답 확인", type="primary")
+        answer_column, submit_column = st.columns([3.1, 1.25], gap="small")
+        with answer_column:
+            answer_text = render_answer_input(problem, key)
+        with submit_column:
+            submitted = st.form_submit_button(
+                "정답 확인",
+                type="primary",
+                width="stretch",
+            )
     if submitted:
         submit_answer(answer_text)
         st.rerun()
