@@ -99,6 +99,34 @@ st.markdown(
         margin: .8rem 0;
     }
     .metric-big { color: #172554; font-size: 1.8rem; font-weight: 800; }
+    .result-metrics {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: .6rem;
+        margin: .75rem 0 .9rem;
+    }
+    .result-metric {
+        background: white;
+        border: 1px solid #dbeafe;
+        border-radius: 18px;
+        box-shadow: 0 8px 22px rgba(30, 64, 175, .07);
+        min-width: 0;
+        padding: .8rem .35rem;
+        text-align: center;
+    }
+    .result-metric-label {
+        color: #52657a;
+        font-size: .88rem;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+    .result-metric-value {
+        color: #172554;
+        font-size: clamp(1.55rem, 7vw, 2.1rem);
+        font-weight: 800;
+        line-height: 1.15;
+        margin-top: .25rem;
+    }
     div[data-testid="stNumberInput"] input,
     div[data-testid="stTextInput"] input {
         font-size: 2rem;
@@ -150,6 +178,9 @@ st.markdown(
         .block-container { padding: .2rem .75rem 1.5rem; }
         .question-card { padding: 1rem .55rem; }
         .problem { font-size: clamp(2.5rem, 13vw, 4rem); }
+        .result-metrics { gap: .45rem; }
+        .result-metric { border-radius: 15px; padding: .7rem .2rem; }
+        .result-metric-label { font-size: .78rem; }
         div[data-testid="stNumberInput"] input::placeholder,
         div[data-testid="stTextInput"] input::placeholder { font-size: 1.1rem; }
         div[data-testid="stFormSubmitButton"] button { font-size: .95rem; }
@@ -449,10 +480,10 @@ def ensure_result_saved(summary: SessionSummary) -> dict | None:
     return saved
 
 
-def save_feeling(feeling: str, summary: SessionSummary) -> None:
+def save_feeling(feeling: str, summary: SessionSummary) -> bool:
     record = st.session_state.result_record
     if not record:
-        return
+        return False
     if feeling == "normal":
         recommended = summary.recommended_level
     else:
@@ -463,10 +494,10 @@ def save_feeling(feeling: str, summary: SessionSummary) -> None:
         update_session(record["id"], {"feeling": feeling, "recommended_level": recommended})
     except StorageError as exc:
         st.error(str(exc))
-        return
+        return False
     record.update({"feeling": feeling, "recommended_level": recommended})
     st.session_state.saved_feeling = feeling
-    st.success("오늘 느낀 난이도를 저장했어요.")
+    return True
 
 
 def send_result_to_parent() -> None:
@@ -492,10 +523,25 @@ def render_result() -> None:
     saved = ensure_result_saved(summary)
 
     render_header("오늘 연습을 마쳤어요. 끝까지 해낸 것이 가장 멋져요!")
-    cols = st.columns(3)
-    cols[0].metric("푼 문제", f"{summary.attempted}개")
-    cols[1].metric("맞힌 문제", f"{summary.correct}개")
-    cols[2].metric("정확도", f"{summary.accuracy:.0f}%")
+    st.markdown(
+        f"""
+        <div class="result-metrics">
+          <div class="result-metric">
+            <div class="result-metric-label">푼 문제</div>
+            <div class="result-metric-value">{summary.attempted}개</div>
+          </div>
+          <div class="result-metric">
+            <div class="result-metric-label">맞힌 문제</div>
+            <div class="result-metric-value">{summary.correct}개</div>
+          </div>
+          <div class="result-metric">
+            <div class="result-metric-label">정확도</div>
+            <div class="result-metric-value">{summary.accuracy:.0f}%</div>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     minutes, seconds = divmod(summary.elapsed_seconds, 60)
     recommendation = int(saved["recommended_level"]) if saved else summary.recommended_level
@@ -530,13 +576,14 @@ def render_result() -> None:
         horizontal=True,
         label_visibility="collapsed",
     )
-    if st.button(
-        "오늘 느낌 저장",
-        disabled=feeling_label is None or saved is None,
-        width="stretch",
-    ):
-        save_feeling(label_to_code[feeling_label], summary)
-        st.rerun()
+    selected_code = label_to_code.get(feeling_label) if feeling_label else None
+    if selected_code and saved is not None and selected_code != saved_code:
+        if save_feeling(selected_code, summary):
+            st.rerun()
+    if saved_code:
+        st.success("오늘 느낌이 저장되었어요.")
+    else:
+        st.caption("하나를 누르면 오늘 느낌이 자동으로 저장돼요.")
 
     wrong = [record for record in records if not record["correct"]]
     if wrong:
