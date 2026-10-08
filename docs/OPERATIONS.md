@@ -9,7 +9,7 @@
 - Cloudflare 배포 기준: `cloudflare/wrangler.jsonc`와 `cloudflare/src/index.js`
 - 최초 공개 배포 확인: 2026-10-04
 
-Cloudflare 무료 배포판은 2026-10-08에 Worker와 D1로 공개 배포했다. `SESSION_SECRET`은 등록했으며, 기존 Streamlit의 `PARENT_PIN`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`를 Cloudflare Secret으로 옮기기 전까지 부모 인증과 Telegram 전송은 비활성 상태다. 기존 Streamlit 주소는 전환 확인 기간 동안 유지한다.
+Cloudflare 무료 배포판은 2026-10-08에 Worker와 D1로 공개 배포했다. `PARENT_PIN`, `SESSION_SECRET`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`를 모두 Cloudflare Secret으로 등록했고, 공개 주소에서 부모 인증·D1 기록 조회·Telegram 전송을 확인했다. 기존 Streamlit 주소는 전환 확인 기간 동안 유지한다.
 
 현재 `PARENT_PIN`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`는 Streamlit Secrets에 등록했다. 따라서 부모 화면 인증과 학습 결과 Telegram 전송을 사용할 수 있다. Supabase Secret은 아직 등록하지 않아 학습 기록은 Streamlit 서버 재시작 후 사라질 수 있다. 모든 Secret 값은 문서와 Git에 기록하지 않는다.
 

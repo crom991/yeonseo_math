@@ -186,10 +186,10 @@
 - 부모용 날짜별 기록·누적 지표·자동 성장/부모 지정 설정 화면 구현
 - 문제 생성·난이도·부모 세션·Telegram 문구 Node 테스트 추가
 
-### 남은 운영 확인
+### 운영 마무리 항목
 
-- `PARENT_PIN`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` Secret 등록
-- 부모 로그인·로그아웃 재잠금과 Telegram 실제 수신 확인
+- 가족 기기에서 Cloudflare 주소를 즐겨찾기에 등록
+- 전환 확인 기간이 끝나면 기존 Streamlit 앱 유지 여부 결정
 
 ### 로컬 통합 검증
 
@@ -213,4 +213,8 @@
 - 공개 390px 화면에서 덧셈 정답 처리, 결과 저장, 3열 결과 카드, `딱 좋았어요` 자동 저장 확인
 - 운영 D1에 2026-10-08 배포 검증용 학습 기록 1건 저장 확인
 - 공개 부모 화면이 PIN 입력 상태로 열리는지 확인
-- 아직 옮기지 않은 `PARENT_PIN`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` 때문에 부모 로그인과 Telegram 버튼은 비활성 상태
+- `PARENT_PIN`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`를 값 노출 없이 Cloudflare Secret으로 등록
+- 공개 부모 화면에서 PIN 로그인, D1 기록 1건 조회, 로그아웃 후 재잠금 확인
+- Telegram 검증용 학습 기록 1건을 추가하고 전송 버튼 활성화 확인
+- 사용자 승인 뒤 Telegram 전송 1건 성공, 앱의 전송 완료 문구와 중복 전송 차단 확인
+- 원격 D1에서 전체 기록 2건, Telegram 전송 기록 1건, 최신 전송 시각 `2026-10-08 23:25 KST` 확인
