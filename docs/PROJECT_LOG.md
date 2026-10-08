@@ -150,3 +150,67 @@
 - 기능 커밋 `e59a44e2798389cee33ae9b1844996dc2a403b27`을 GitHub `main`에 반영하고 로컬 `HEAD`와 `origin/main` 일치 확인
 - 2026-10-04 10:54 KST에 공개 앱 <https://yeonseo-math.streamlit.app>에서 새 3열 결과 카드 CSS가 제공되는지 확인
 - 자동 저장 동작 검증은 운영 학습 기록을 오염시키지 않도록 분리된 임시 로컬 저장소에서 수행
+
+## 2026-10-04 · 아빠에게 Telegram 전송 운영 설정
+
+### 설정
+
+- `PORTPOLIO_CODEX`에서 사용 중인 기존 Telegram 봇과 개인 채팅 수신처를 재사용
+- Streamlit Secrets에 `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` 등록 완료
+- 실제 Secret 값은 문서와 Git에 기록하지 않음
+
+### 확인
+
+- Streamlit Community Cloud의 `yeonseo_math` 앱 설정에서 두 Secret 이름이 저장된 상태 확인
+- 공개 앱 시작 화면이 정상적으로 제공되는 상태 확인
+- 실제 학습 결과 화면에서 `아빠에게 학습 결과 보내기`를 실행하고 Telegram 메시지가 정상 수신된 것을 사용자 확인으로 최종 검증
+- Notion `2026-10-03 오늘의 연산 10분 웹앱 구축` 페이지에 동작 구조·운영 설정·장애 확인·최종 검증을 추가하고, 대상 페이지와 상위 `연서 수학연산 자료` 연결을 다시 조회해 저장 상태 확인
+
+## 2026-10-08 · Cloudflare 무료 배포판 전환 시작
+
+### 결정
+
+- 기존 Streamlit 앱과 공개 주소는 전환 검증이 끝날 때까지 유지한다.
+- 새 배포판은 Cloudflare 정적 자산 + Workers + D1 구조로 만든다.
+- 아이용 학습 화면은 서버 기동을 기다리지 않고 정적으로 제공한다.
+- 학습 기록, 부모 PIN 인증, 설정 저장, Telegram 전송은 Worker API에서 처리한다.
+- Secret 값은 코드·문서·Git에 기록하지 않고 Cloudflare Secret으로만 등록한다.
+
+### 구현
+
+- 기존 17단계 문제 생성과 세션 내 난이도 조절 규칙을 JavaScript로 이식
+- 390px 모바일 한 줄 답 입력·확인, 3열 결과 카드, 느낌 즉시 저장 흐름 구현
+- D1 학습 기록·설정 스키마와 조회·저장 API 구현
+- 기록별 수정 토큰으로 느낌 저장과 Telegram 중복 전송 보호
+- HttpOnly 서명 쿠키 기반 부모 PIN 인증·로그아웃 구현
+- 부모용 날짜별 기록·누적 지표·자동 성장/부모 지정 설정 화면 구현
+- 문제 생성·난이도·부모 세션·Telegram 문구 Node 테스트 추가
+
+### 남은 운영 확인
+
+- `PARENT_PIN`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` Secret 등록
+- 부모 로그인·로그아웃 재잠금과 Telegram 실제 수신 확인
+
+### 로컬 통합 검증
+
+- Node 자동 테스트 13건과 기존 Python 자동 테스트 17건 통과
+- Wrangler 정적 자산·Worker 번들 dry-run 성공
+- D1 로컬 마이그레이션 적용 성공, 의존성 보안 감사 취약점 0건 확인
+- 390×844 화면에서 학습 시작, 정답 처리, 중도 종료, 3열 결과 카드, 느낌 즉시 저장 확인
+- 부모 화면의 `/parent` 반복 이동 문제를 발견하고 정적 자산 라우팅을 단순화해 해결
+- 테스트 전용 PIN으로 부모 로그인, 2026-10-08 기록 조회, 부모 지정 설정 저장 후 자동 성장 복원 확인
+- Cloudflare CLI 로그인 시도는 승인 제한 시간 안에 계정 인증이 완료되지 않아 종료됨
+- 계정 로그인 후 D1 생성·Secret 등록·공개 배포·실제 서비스 검증을 이어서 진행한다.
+
+### 공개 배포
+
+- 2026-10-08 23:13 KST에 Cloudflare OAuth 로그인 완료
+- APAC 지역 D1 `yeonseo-math` 생성: `d1380a6e-0661-4525-b002-4feec2780f3b`
+- 원격 마이그레이션 `0001_initial.sql` 적용 완료
+- 자동 생성한 `SESSION_SECRET`을 값 노출 없이 Worker Secret으로 등록
+- Worker와 정적 자산 6개를 <https://yeonseo-math.exambreaker-dev.workers.dev>에 배포
+- 공개 버전 ID: `cbb4212e-9421-41ee-b4ba-886403ec718f`
+- 공개 390px 화면에서 덧셈 정답 처리, 결과 저장, 3열 결과 카드, `딱 좋았어요` 자동 저장 확인
+- 운영 D1에 2026-10-08 배포 검증용 학습 기록 1건 저장 확인
+- 공개 부모 화면이 PIN 입력 상태로 열리는지 확인
+- 아직 옮기지 않은 `PARENT_PIN`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` 때문에 부모 로그인과 Telegram 버튼은 비활성 상태

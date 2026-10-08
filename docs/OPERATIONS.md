@@ -2,12 +2,16 @@
 
 ## 현재 운영 주소
 
+- Cloudflare: <https://yeonseo-math.exambreaker-dev.workers.dev>
 - Streamlit: <https://yeonseo-math.streamlit.app>
 - GitHub: <https://github.com/crom991/yeonseo_math>
-- 배포 기준: `main` 브랜치의 `app.py`
+- Streamlit 배포 기준: `main` 브랜치의 `app.py`
+- Cloudflare 배포 기준: `cloudflare/wrangler.jsonc`와 `cloudflare/src/index.js`
 - 최초 공개 배포 확인: 2026-10-04
 
-현재 `PARENT_PIN`은 Streamlit Secrets에 등록했다. Telegram과 Supabase Secret은 아직 등록하지 않았다. 따라서 부모 화면 인증은 사용할 수 있지만 Telegram 전송은 비활성화되고, 학습 기록은 Streamlit 서버 재시작 후 사라질 수 있다. PIN 값은 문서와 Git에 기록하지 않는다.
+Cloudflare 무료 배포판은 2026-10-08에 Worker와 D1로 공개 배포했다. `SESSION_SECRET`은 등록했으며, 기존 Streamlit의 `PARENT_PIN`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`를 Cloudflare Secret으로 옮기기 전까지 부모 인증과 Telegram 전송은 비활성 상태다. 기존 Streamlit 주소는 전환 확인 기간 동안 유지한다.
+
+현재 `PARENT_PIN`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`는 Streamlit Secrets에 등록했다. 따라서 부모 화면 인증과 학습 결과 Telegram 전송을 사용할 수 있다. Supabase Secret은 아직 등록하지 않아 학습 기록은 Streamlit 서버 재시작 후 사라질 수 있다. 모든 Secret 값은 문서와 Git에 기록하지 않는다.
 
 ## 구성
 
@@ -18,6 +22,9 @@
 - `notifications.py`: Telegram 메시지 작성·전송
 - `pages/1_부모_학습기록.py`: 날짜별 기록과 부모 설정
 - `docs/SUPABASE_SETUP.sql`: 운영 저장소 표 생성문
+- `cloudflare/public`: Cloudflare 정적 학습·부모 화면
+- `cloudflare/src/index.js`: Worker API, D1 저장, 부모 인증, Telegram 전송
+- `cloudflare/migrations`: D1 스키마
 
 ## Streamlit Secrets
 
@@ -61,6 +68,27 @@ python -m compileall -q app.py app_config.py arithmetic.py curriculum.py notific
 git diff --check
 ```
 
+Cloudflare 배포판은 다음 검증을 추가한다.
+
+```powershell
+cd cloudflare
+npm test
+npm run check
+npx wrangler deploy --dry-run
+```
+
+## Cloudflare 최초 배포
+
+1. Cloudflare 계정에서 D1 `yeonseo-math`를 생성하고 반환된 ID를 `cloudflare/wrangler.jsonc`에 반영한다.
+2. `cloudflare/migrations/0001_initial.sql`을 원격 D1에 적용한다.
+3. `PARENT_PIN`, `SESSION_SECRET`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`를 Wrangler Secret으로 등록한다.
+4. Worker와 정적 자산을 배포한다.
+5. 공개 주소에서 아이 학습 1회와 느낌 자동 저장을 확인한다.
+6. 부모 PIN 인증, 기록 표시, 설정 저장, 로그아웃 재잠금을 확인한다.
+7. Telegram 전송은 실제 수신까지 확인한다.
+
+Secret 값은 로컬 파일·Git·문서에 남기지 않는다. `SESSION_SECRET`은 부모 인증 쿠키 서명용으로 충분히 긴 임의 문자열을 사용한다.
+
 ## 장애 확인
 
 - Telegram 버튼이 비활성화되면 `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` 두 Secret이 모두 있는지 확인한다.
@@ -77,3 +105,5 @@ git diff --check
 - 기록 저장 완료: 학습 후 부모 화면 및 Supabase 표에서 동일 기록 확인
 
 각 항목은 서로 대신할 수 없으므로 별도로 확인하고 기록한다.
+
+Cloudflare 전환도 코드 저장, D1 생성·마이그레이션, Secret 등록, Worker 배포, 공개 화면 검증, Telegram 실제 수신을 서로 분리해 판정한다.

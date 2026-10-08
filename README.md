@@ -4,8 +4,11 @@
 
 ## 공개 서비스
 
+- Cloudflare: <https://yeonseo-math.exambreaker-dev.workers.dev>
 - 웹앱: <https://yeonseo-math.streamlit.app>
 - GitHub: <https://github.com/crom991/yeonseo_math>
+
+Cloudflare 무료 배포판은 `cloudflare/`에 구축했다. 정적 화면은 즉시 제공하고, Worker API와 D1이 기록·부모 인증·Telegram 전송을 담당한다. 기존 Streamlit 주소는 전환 확인 기간 동안 함께 유지한다.
 
 ## 핵심 기능
 
@@ -33,6 +36,15 @@ python -m unittest discover -s tests -v
 python -m compileall -q app.py app_config.py arithmetic.py curriculum.py notifications.py storage.py pages tests
 ```
 
+Cloudflare 배포판은 다음처럼 확인한다.
+
+```powershell
+cd cloudflare
+npm install
+npm test
+npm run check
+```
+
 ## 운영 설정
 
 Streamlit Secrets에 다음 이름을 등록합니다. 실제 값은 Git에 올리지 않습니다.
@@ -50,3 +62,4 @@ Streamlit Secrets에 다음 이름을 등록합니다. 실제 값은 Git에 올�
 - [제품·학습 설계](docs/PRODUCT_SPEC.md)
 - [작업 진행 기록](docs/PROJECT_LOG.md)
 - [운영 및 배포](docs/OPERATIONS.md)
+- [Cloudflare 배포판](cloudflare/README.md)

@@ -6,3 +6,5 @@ __pycache__/
 data/private/
 .test-data/
 .DS_Store
+cloudflare/node_modules/
+cloudflare/.wrangler/
