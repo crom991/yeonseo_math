@@ -218,3 +218,19 @@
 - Telegram 검증용 학습 기록 1건을 추가하고 전송 버튼 활성화 확인
 - 사용자 승인 뒤 Telegram 전송 1건 성공, 앱의 전송 완료 문구와 중복 전송 차단 확인
 - 원격 D1에서 전체 기록 2건, Telegram 전송 기록 1건, 최신 전송 시각 `2026-10-08 23:25 KST` 확인
+
+## 2026-10-09 · 사용자 실사용 확인 및 운영 전환 마감
+
+### 최종 확인
+
+- 사용자가 Cloudflare 운영 주소에서 직접 테스트하고 정상 동작을 확인
+- 운영 주소는 <https://yeonseo-math.exambreaker-dev.workers.dev>로 확정
+- 코드 저장, Cloudflare 배포, D1 저장, Secret 등록, 부모 화면, Telegram 실제 발송, 사용자 실사용 검증까지 완료 상태로 마감
+- 기존 Streamlit 앱은 전환 확인 기간 동안 보조 주소로 유지하고, 안정 운영 뒤 유지 또는 종료 여부를 결정
+
+### Notion 기록
+
+- Notion `2026-10-03 오늘의 연산 10분 웹앱 구축` 페이지의 Supabase 미완료 문구를 Cloudflare D1 완료 상태로 갱신
+- 운영 주소, Workers·D1 구조, Secret 이름, 기능·검증 결과, Git 기준점, 다음 운영 작업을 한글로 기록
+- Secret 실제 값은 기록하지 않고 `PARENT_PIN`, `SESSION_SECRET`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` 이름만 기록
+- 수정 뒤 대상 페이지와 상위 `연서 수학연산 자료` 페이지를 다시 조회해 새 섹션 저장과 하위 페이지 연결 유지 확인
