@@ -7,6 +7,7 @@ import {
   parseAnswer,
   summarizeSession,
 } from "./learning.js";
+import { PROFILES, normalizeProfileId } from "./profiles.js";
 
 const SESSION_SECONDS = 10 * 60;
 const app = document.querySelector("#app");
@@ -17,6 +18,7 @@ const encouragements = [
 ];
 
 const state = {
+  profileId: null,
   bootstrap: null,
   screen: "loading",
   records: [],
@@ -55,7 +57,8 @@ async function api(path, options = {}) {
 }
 
 function hero(subtitle) {
-  return `<header class="hero"><h1>오늘의 연산 10분</h1><p>${escapeHtml(subtitle)}</p></header>`;
+  const profile = PROFILES[state.profileId];
+  return `<header class="hero"><h1>오늘의 연산 10분</h1>${profile ? `<div class="profile-badge">${profile.emoji} ${profile.name}</div>` : ""}<p>${escapeHtml(subtitle)}</p></header>`;
 }
 
 function newProblem() {
@@ -66,7 +69,37 @@ function newProblem() {
 }
 
 async function loadBootstrap() {
-  state.bootstrap = await api("/api/bootstrap");
+  if (!state.profileId) throw new Error("학습자를 먼저 선택해 주세요.");
+  state.bootstrap = await api(`/api/bootstrap?profile=${encodeURIComponent(state.profileId)}`);
+}
+
+function renderProfileSelection(message = "") {
+  state.screen = "profile";
+  state.profileId = null;
+  state.bootstrap = null;
+  clearInterval(state.timer);
+  const buttons = Object.values(PROFILES).map((profile) => `
+    <button class="profile-card" data-profile="${profile.id}" type="button">
+      <span class="profile-emoji" aria-hidden="true">${profile.emoji}</span>
+      <strong>${profile.name}</strong>
+      <span>내 학습 시작하기</span>
+    </button>`).join("");
+  app.innerHTML = `
+    ${hero("오늘 공부할 친구를 골라 주세요.")}
+    ${message ? `<div class="feedback error">${escapeHtml(message)}</div>` : ""}
+    <section class="summary-card profile-selection">
+      <h2>누가 공부하나요?</h2>
+      <p class="caption">로그인 없이 이름만 고르면 기록과 난이도가 각자 따로 저장돼요.</p>
+      <div class="profile-grid">${buttons}</div>
+    </section>
+    <a class="button secondary" href="/parent">👨‍👩‍👧‍👧 부모용 학습 기록과 설정</a>`;
+  document.querySelectorAll("[data-profile]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      state.profileId = normalizeProfileId(button.dataset.profile);
+      app.innerHTML = `<div class="loading-card">${PROFILES[state.profileId].name}의 학습 화면을 준비하고 있어요…</div>`;
+      try { await loadBootstrap(); renderIntro(); } catch (error) { renderProfileSelection(error.message); }
+    });
+  });
 }
 
 function renderIntro(message = "") {
@@ -83,9 +116,11 @@ function renderIntro(message = "") {
     </section>
     <div class="stack">
       <button id="start-button" class="button primary" type="button">연습 시작</button>
-      <a class="button secondary" href="/parent">👨‍👩‍👧 부모용 학습 기록과 설정</a>
+      <button id="switch-profile" class="button secondary" type="button">다른 아이로 바꾸기</button>
+      <a class="button secondary" href="/parent">👨‍👩‍👧‍👧 부모용 학습 기록과 설정</a>
     </div>`;
   document.querySelector("#start-button").addEventListener("click", startSession);
+  document.querySelector("#switch-profile").addEventListener("click", () => renderProfileSelection());
 }
 
 function startSession() {
@@ -201,7 +236,7 @@ async function finishSession() {
   try {
     const data = await api("/api/sessions", {
       method: "POST",
-      body: JSON.stringify({ startLevel: state.startLevel, elapsedSeconds: summary.elapsedSeconds, records: state.records }),
+      body: JSON.stringify({ profileId: state.profileId, startLevel: state.startLevel, elapsedSeconds: summary.elapsedSeconds, records: state.records }),
     });
     state.result = data.session;
     state.editToken = data.editToken;
@@ -257,6 +292,7 @@ function renderResult(summary, storageError = "", statusMessage = "") {
     <div class="spacer"></div>
     <div class="stack">
       <button id="restart-button" class="button primary" type="button">새로 10분 연습</button>
+      <button id="switch-profile" class="button secondary" type="button">다른 아이로 바꾸기</button>
       <button id="telegram-button" class="button secondary" type="button" ${!saved || !state.bootstrap.telegramConfigured || alreadySent ? "disabled" : ""}>📩 아빠에게 학습 결과 보내기</button>
       <p class="caption">${alreadySent ? "오늘 결과를 이미 보냈어요." : state.bootstrap.telegramConfigured ? "" : "Telegram 전송 설정이 필요합니다."}</p>
       <a class="button secondary" href="/parent">📊 부모용 날짜별 학습 기록 보기</a>
@@ -269,6 +305,7 @@ function renderResult(summary, storageError = "", statusMessage = "") {
   document.querySelector("#restart-button").addEventListener("click", async () => {
     try { await loadBootstrap(); startSession(); } catch (error) { renderIntro(error.message); }
   });
+  document.querySelector("#switch-profile").addEventListener("click", () => renderProfileSelection());
   document.querySelector("#telegram-button").addEventListener("click", () => sendTelegram(summary));
 }
 
@@ -305,6 +342,4 @@ async function sendTelegram(summary) {
   }
 }
 
-loadBootstrap().then(() => renderIntro()).catch((error) => {
-  app.innerHTML = `${hero("학습 화면을 열지 못했어요.")}<div class="feedback error">${escapeHtml(error.message)}</div><button class="button primary" type="button" onclick="location.reload()">다시 시도</button>`;
-});
+renderProfileSelection();

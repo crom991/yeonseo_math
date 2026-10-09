@@ -28,6 +28,7 @@ from notifications import (
     send_telegram_message,
     telegram_is_configured,
 )
+from profiles import PROFILES, normalize_profile_id
 from storage import (
     StorageError,
     list_sessions,
@@ -64,6 +65,15 @@ st.markdown(
         margin-bottom: .35rem;
     }
     .hero p { color: #52657a; font-size: 1rem; }
+    .profile-badge {
+        background: #dbeafe;
+        border-radius: 999px;
+        color: #1e3a8a;
+        display: inline-block;
+        font-weight: 800;
+        margin-bottom: .4rem;
+        padding: .3rem .75rem;
+    }
     .question-card {
         background: white;
         border: 1px solid #dbeafe;
@@ -193,7 +203,8 @@ st.markdown(
 
 def initialize_state() -> None:
     defaults = {
-        "screen": "intro",
+        "screen": "profile",
+        "selected_profile_id": None,
         "records": [],
         "current_level": 2,
         "start_level": 2,
@@ -223,8 +234,14 @@ def new_problem(level: int) -> Problem:
 
 
 def start_session() -> None:
+    profile_id = normalize_profile_id(st.session_state.selected_profile_id)
+    if not profile_id:
+        st.session_state.screen = "profile"
+        return
     try:
-        start_level = choose_start_level(list_sessions(), load_settings())
+        start_level = choose_start_level(
+            list_sessions(profile_id), load_settings(profile_id)
+        )
     except StorageError:
         start_level = 2
     now = time.time()
@@ -304,8 +321,13 @@ def submit_answer(answer_text: str) -> None:
 
 
 def render_header(subtitle: str) -> None:
+    profile_id = normalize_profile_id(st.session_state.selected_profile_id)
+    badge = ""
+    if profile_id:
+        profile = PROFILES[profile_id]
+        badge = f'<div class="profile-badge">{profile["emoji"]} {profile["name"]}</div>'
     st.markdown(
-        f'<div class="hero"><h1>오늘의 연산 10분</h1><p>{html.escape(subtitle)}</p></div>',
+        f'<div class="hero"><h1>오늘의 연산 10분</h1>{badge}<p>{html.escape(subtitle)}</p></div>',
         unsafe_allow_html=True,
     )
 
@@ -325,11 +347,49 @@ def render_timer() -> None:
 
 
 def next_study_label() -> str:
+    profile_id = normalize_profile_id(st.session_state.selected_profile_id)
+    if not profile_id:
+        return "학습자를 먼저 선택해 주세요."
     try:
-        level = choose_start_level(list_sessions(), load_settings())
+        level = choose_start_level(
+            list_sessions(profile_id), load_settings(profile_id)
+        )
         return f"오늘은 {DOMAIN_LABELS[LEVELS[level].domain]} · {LEVELS[level].name}부터 시작해요."
     except StorageError:
         return "오늘은 두 자리 수 덧셈부터 시작해요."
+
+
+def choose_profile(profile_id: str) -> None:
+    normalized = normalize_profile_id(profile_id)
+    if not normalized:
+        return
+    st.session_state.selected_profile_id = normalized
+    st.session_state.screen = "intro"
+
+
+def render_profile_selection() -> None:
+    render_header("오늘 공부할 친구를 골라 주세요.")
+    st.markdown(
+        '<div class="summary-card"><div class="metric-big">누가 공부하나요?</div>'
+        '<p>로그인 없이 이름만 고르면 기록과 난이도가 각자 따로 저장돼요.</p></div>',
+        unsafe_allow_html=True,
+    )
+    columns = st.columns(2)
+    for column, (profile_id, profile) in zip(columns, PROFILES.items()):
+        with column:
+            if st.button(
+                f'{profile["emoji"]} {profile["name"]}',
+                key=f"profile_{profile_id}",
+                width="stretch",
+            ):
+                choose_profile(profile_id)
+                st.rerun()
+    st.page_link(
+        "pages/1_부모_학습기록.py",
+        label="부모용 학습 기록과 설정",
+        icon="👨‍👩‍👧‍👧",
+        width="stretch",
+    )
 
 
 def render_intro() -> None:
@@ -347,6 +407,10 @@ def render_intro() -> None:
     )
     if st.button("연습 시작", type="primary", width="stretch"):
         start_session()
+        st.rerun()
+    if st.button("다른 아이로 바꾸기", width="stretch"):
+        st.session_state.selected_profile_id = None
+        st.session_state.screen = "profile"
         st.rerun()
     st.page_link(
         "pages/1_부모_학습기록.py",
@@ -457,6 +521,7 @@ def ensure_result_saved(summary: SessionSummary) -> dict | None:
         else st.session_state.start_level
     )
     record = {
+        "profile_id": st.session_state.selected_profile_id,
         "completed_at": completed_at.isoformat(),
         "local_date": completed_at.date().isoformat(),
         "domain": summary.domain,
@@ -605,6 +670,11 @@ def render_result() -> None:
         start_session()
         st.rerun()
 
+    if st.button("다른 아이로 바꾸기", width="stretch"):
+        st.session_state.selected_profile_id = None
+        st.session_state.screen = "profile"
+        st.rerun()
+
     configured = telegram_is_configured()
     already_sent = st.session_state.telegram_sent or bool((saved or {}).get("telegram_sent_at"))
     if st.button(
@@ -633,7 +703,11 @@ def render_result() -> None:
 
 initialize_state()
 
-if st.session_state.screen == "intro":
+if st.session_state.screen == "profile" or not normalize_profile_id(
+    st.session_state.selected_profile_id
+):
+    render_profile_selection()
+elif st.session_state.screen == "intro":
     render_intro()
 elif st.session_state.screen == "quiz":
     render_quiz()

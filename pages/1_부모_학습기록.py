@@ -9,6 +9,7 @@ from app_config import setting
 from arithmetic import DOMAIN_LABELS, DOMAIN_ORDER, LEVELS, levels_for_domain
 from curriculum import domain_is_mastered, normalized_settings, unlocked_domains
 from notifications import FEELING_LABELS
+from profiles import PROFILES, profile_name
 from storage import (
     StorageError,
     list_sessions,
@@ -26,27 +27,34 @@ st.set_page_config(
 )
 
 
-def authenticate_parent() -> bool:
-    expected_pin = setting("PARENT_PIN")
-    if not expected_pin:
+def authenticate_parent() -> str | None:
+    yeonseo_pin = setting("PARENT_PIN")
+    haeun_pin = setting("HAEUN_PARENT_PIN")
+    if not yeonseo_pin and not haeun_pin:
         st.error(
-            "부모 페이지가 아직 잠겨 있습니다. Streamlit Secrets에 `PARENT_PIN`을 "
-            "등록하면 날짜별 기록과 설정을 볼 수 있습니다."
+            "부모 페이지가 아직 잠겨 있습니다. Streamlit Secrets에 `PARENT_PIN`과 "
+            "`HAEUN_PARENT_PIN`을 등록하면 날짜별 기록과 설정을 볼 수 있습니다."
         )
-        return False
-    if st.session_state.get("parent_authenticated"):
-        return True
+        return None
+    authenticated_profile = st.session_state.get("parent_profile_id")
+    if st.session_state.get("parent_authenticated") and authenticated_profile in PROFILES:
+        return str(authenticated_profile)
     st.title("🔒 부모 확인")
-    st.caption("학습 기록과 난이도 설정은 부모만 볼 수 있어요.")
+    st.caption("부모 PIN에 연결된 아이의 학습 기록과 설정만 보여 드려요.")
     entered = st.text_input("부모 PIN", type="password", max_chars=20)
     if st.button("확인", type="primary", width="stretch"):
-        if hmac.compare_digest(entered, expected_pin):
+        yeonseo_match = bool(yeonseo_pin) and hmac.compare_digest(entered, yeonseo_pin)
+        haeun_match = bool(haeun_pin) and hmac.compare_digest(entered, haeun_pin)
+        if yeonseo_match and haeun_match:
+            st.error("두 부모 PIN은 서로 다르게 설정해 주세요.")
+        elif yeonseo_match or haeun_match:
             st.session_state.parent_authenticated = True
+            st.session_state.parent_profile_id = "haeun" if haeun_match else "yeonseo"
             st.rerun()
         else:
             st.error("PIN이 맞지 않습니다.")
     st.page_link("app.py", label="학습 화면으로 돌아가기", icon="✏️")
-    return False
+    return None
 
 
 def history_frame(sessions: list[dict]) -> pd.DataFrame:
@@ -100,21 +108,22 @@ def render_summary(sessions: list[dict]) -> None:
         st.line_chart(chart, y="정확도(%)", x_label="학습 순서", y_label="정확도")
 
 
-def render_settings(sessions: list[dict]) -> None:
-    st.subheader("학습 영역과 난이도 설정")
-    current = normalized_settings(load_settings())
+def render_settings(sessions: list[dict], profile_id: str) -> None:
+    current = normalized_settings(load_settings(profile_id))
     mode_label = "자동 성장" if current["mode"] == "automatic" else "부모 지정"
     mode = st.radio(
         "운영 방식",
         ["자동 성장", "부모 지정"],
         index=0 if mode_label == "자동 성장" else 1,
         horizontal=True,
+        key=f"mode_{profile_id}",
     )
     enabled_labels = st.multiselect(
         "자동 성장에 포함할 영역",
         options=[DOMAIN_LABELS[domain] for domain in DOMAIN_ORDER],
         default=[DOMAIN_LABELS[domain] for domain in current["enabled_domains"]],
         help="선택한 순서가 아니라 덧셈→뺄셈→곱셈→나눗셈→소수→분수 순서로 열립니다.",
+        key=f"enabled_domains_{profile_id}",
     )
     enabled_domains = [
         domain for domain in DOMAIN_ORDER if DOMAIN_LABELS[domain] in enabled_labels
@@ -129,6 +138,7 @@ def render_settings(sessions: list[dict]) -> None:
         ),
         format_func=lambda domain: DOMAIN_LABELS[domain],
         disabled=mode != "부모 지정",
+        key=f"focus_domain_{profile_id}",
     )
     level_options = levels_for_domain(focus_domain)
     forced_level = st.selectbox(
@@ -141,8 +151,9 @@ def render_settings(sessions: list[dict]) -> None:
         ),
         format_func=lambda level: f"{level}단계 · {LEVELS[level].name}",
         disabled=mode != "부모 지정",
+        key=f"forced_level_{profile_id}",
     )
-    submitted = st.button("설정 저장", type="primary")
+    submitted = st.button("설정 저장", type="primary", key=f"save_{profile_id}")
     if submitted:
         save_settings(
             {
@@ -150,9 +161,10 @@ def render_settings(sessions: list[dict]) -> None:
                 "enabled_domains": enabled_domains,
                 "focus_domain": focus_domain,
                 "forced_level": forced_level,
-            }
+            },
+            profile_id,
         )
-        st.success("다음 10분 학습부터 새 설정을 적용합니다.")
+        st.success(f"{profile_name(profile_id)}의 다음 10분 학습부터 새 설정을 적용합니다.")
         st.rerun()
 
     unlocked = unlocked_domains(sessions, current)
@@ -169,21 +181,26 @@ def render_settings(sessions: list[dict]) -> None:
         st.write(f"- {DOMAIN_LABELS[domain]}: {status}")
 
 
-if authenticate_parent():
+authenticated_profile_id = authenticate_parent()
+if authenticated_profile_id:
     top_left, top_right = st.columns([4, 1])
     with top_left:
-        st.title("📊 부모용 학습 기록")
-        st.caption("날짜별 결과를 보고 다음 학습 영역과 단계를 조절할 수 있습니다.")
+        st.title(f"{PROFILES[authenticated_profile_id]['emoji']} {profile_name(authenticated_profile_id)} 부모용 학습 기록")
+        st.caption("입력한 부모 PIN에 연결된 아이의 기록과 설정만 표시합니다.")
     with top_right:
         if st.button("로그아웃", width="stretch"):
             st.session_state.parent_authenticated = False
+            st.session_state.parent_profile_id = None
             st.rerun()
 
     try:
-        all_sessions = list_sessions()
+        selected_profile_id = authenticated_profile_id
+        st.subheader(f"{profile_name(selected_profile_id)}의 기록")
+        all_sessions = list_sessions(selected_profile_id)
         render_summary(all_sessions)
         st.divider()
-        render_settings(all_sessions)
+        st.subheader(f"{profile_name(selected_profile_id)}의 설정")
+        render_settings(all_sessions, selected_profile_id)
     except StorageError as exc:
         st.error(str(exc))
 

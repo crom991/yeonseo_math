@@ -26,15 +26,25 @@ npm run dev
 실제 값은 파일이나 Git에 기록하지 않고 Wrangler Secret으로만 등록한다.
 
 - `PARENT_PIN`
+- `HAEUN_PARENT_PIN`
 - `SESSION_SECRET`
 - `TELEGRAM_BOT_TOKEN`
 - `TELEGRAM_CHAT_ID`
+
+## 멀티 프로필 데이터 규칙
+
+- 아이 화면은 로그인 없이 `연서 / 하은`을 선택한다.
+- 학습 기록과 학습 설정은 `profile_id`로 분리한다.
+- 기존 `profile_id` 없는 D1 기록은 `0002_multi_profile.sql` 적용 때 `yeonseo`로 보존한다.
+- `PARENT_PIN`은 연서, `HAEUN_PARENT_PIN`은 하은 부모 화면에 연결한다.
+- 부모 PIN 인증 뒤에는 해당 PIN에 연결된 아이의 기록과 설정만 표시한다.
+- 운영 반영은 코드 배포보다 먼저 `npm run db:remote`로 최신 마이그레이션을 적용한다.
 
 ## 최초 배포 순서
 
 1. `npx wrangler d1 create yeonseo-math`로 D1을 만든다.
 2. 출력된 `database_id`를 `wrangler.jsonc`의 자리표시자와 교체한다.
 3. `npm run db:remote`로 마이그레이션을 적용한다.
-4. 네 Secret을 `npx wrangler secret put <NAME>`으로 등록한다.
+4. 다섯 Secret을 `npx wrangler secret put <NAME>`으로 등록한다.
 5. `npm run deploy`로 배포한다.
 6. 공개 주소에서 학습 저장, 느낌 저장, Telegram 실제 수신, 부모 PIN 로그인·로그아웃을 각각 확인한다.

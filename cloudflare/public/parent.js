@@ -1,4 +1,5 @@
 import { DOMAIN_LABELS, DOMAIN_ORDER, LEVELS, domainIsMastered, levelsForDomain, normalizedSettings, unlockedDomains } from "./learning.js";
+import { profileName } from "./profiles.js";
 
 const root = document.querySelector("#parent-app");
 
@@ -24,7 +25,7 @@ function renderLogin(message = "") {
   root.innerHTML = `
     <section class="panel login-card">
       <h1>🔒 부모 확인</h1>
-      <p class="caption">학습 기록과 난이도 설정은 부모만 볼 수 있어요.</p>
+      <p class="caption">부모 PIN에 연결된 아이의 학습 기록과 설정만 보여 드려요.</p>
       ${message ? `<div class="feedback error">${escapeHtml(message)}</div>` : ""}
       <form id="login-form" class="stack">
         <label class="field"><span>부모 PIN</span><input id="pin" type="password" inputmode="numeric" maxlength="40" autocomplete="current-password" required></label>
@@ -97,7 +98,7 @@ function settingsHtml(sessions, rawSettings) {
   </form>`;
 }
 
-function bindSettings(sessions, settings) {
+function bindSettings(sessions, settings, profileId) {
   const modeInputs = [...document.querySelectorAll('input[name="mode"]')];
   const focus = document.querySelector("#focus-domain");
   const level = document.querySelector("#forced-level");
@@ -133,7 +134,7 @@ function bindSettings(sessions, settings) {
     };
     const result = await request("/api/parent/settings", { method: "PUT", body: JSON.stringify(payload) });
     if (!result.ok) return showStatus(result.data.error || "설정을 저장하지 못했습니다.", true);
-    showStatus("다음 10분 학습부터 새 설정을 적용합니다.");
+    showStatus(`${profileName(profileId)}의 다음 10분 학습부터 새 설정을 적용합니다.`);
   });
 }
 
@@ -145,14 +146,14 @@ function showStatus(message, error = false) {
 }
 
 function renderDashboard(data) {
-  const { sessions, settings } = data;
+  const { profileId, profile, sessions, settings } = data;
   root.innerHTML = `
-    <header class="parent-header"><div><h1>📊 부모용 학습 기록</h1><p class="caption">날짜별 결과를 보고 다음 학습 영역과 단계를 조절할 수 있습니다.</p></div><button id="logout" class="button danger" type="button">로그아웃</button></header>
+    <header class="parent-header"><div><h1>${escapeHtml(profile?.emoji || "📊")} ${profileName(profileId)} 부모용 학습 기록</h1><p class="caption">입력한 부모 PIN에 연결된 아이의 기록과 설정만 표시합니다.</p></div><button id="logout" class="button danger" type="button">로그아웃</button></header>
     <div id="parent-status" hidden></div>
-    <section class="panel"><h2>날짜별 학습 기록</h2>${metricsHtml(sessions)}${historyHtml(sessions)}</section>
-    <section class="panel"><h2>학습 영역과 난이도 설정</h2>${settingsHtml(sessions, settings)}</section>
+    <section class="panel"><h2>${profileName(profileId)}의 날짜별 학습 기록</h2>${metricsHtml(sessions)}${historyHtml(sessions)}</section>
+    <section class="panel"><h2>${profileName(profileId)}의 학습 영역과 난이도 설정</h2>${settingsHtml(sessions, settings)}</section>
     <a class="button secondary" href="/">✏️ 학습 화면으로 돌아가기</a>`;
-  bindSettings(sessions, settings);
+  bindSettings(sessions, settings, profileId);
   document.querySelector("#logout").addEventListener("click", async () => {
     await request("/api/parent/logout", { method: "POST", body: "{}" });
     renderLogin();

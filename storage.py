@@ -10,6 +10,7 @@ from uuid import uuid4
 
 from app_config import setting
 from curriculum import DEFAULT_SETTINGS, normalized_settings
+from profiles import DEFAULT_PROFILE_ID, normalize_profile_id
 
 
 DATA_DIR = Path(os.environ.get("MATHWEB_DATA_DIR", "data/private"))
@@ -66,22 +67,37 @@ def _supabase_request(method: str, table: str, *, query: str = "", payload=None)
     return json.loads(raw) if raw else None
 
 
-def list_sessions() -> list[dict]:
+def list_sessions(profile_id: str = DEFAULT_PROFILE_ID) -> list[dict]:
+    normalized_profile = normalize_profile_id(profile_id)
+    if not normalized_profile:
+        raise StorageError("학습자를 연서 또는 하은으로 선택해 주세요.")
     if storage_mode() == "supabase":
+        encoded_profile = parse.quote(normalized_profile, safe="")
         rows = _supabase_request(
-            "GET", "math_sessions", query="?select=*&order=completed_at.asc"
+            "GET",
+            "math_sessions",
+            query=f"?profile_id=eq.{encoded_profile}&select=*&order=completed_at.asc",
         )
         return list(rows or [])
-    return list(_read_json(SESSIONS_PATH, []))
+    return [
+        session
+        for session in _read_json(SESSIONS_PATH, [])
+        if (normalize_profile_id(session.get("profile_id")) or DEFAULT_PROFILE_ID)
+        == normalized_profile
+    ]
 
 
 def save_session(session: Mapping[str, object]) -> dict:
     record = dict(session)
+    profile_id = normalize_profile_id(record.get("profile_id") or DEFAULT_PROFILE_ID)
+    if not profile_id:
+        raise StorageError("학습자를 연서 또는 하은으로 선택해 주세요.")
+    record["profile_id"] = profile_id
     record.setdefault("id", uuid4().hex)
     if storage_mode() == "supabase":
         rows = _supabase_request("POST", "math_sessions", payload=record)
         return dict((rows or [record])[0])
-    sessions = list_sessions()
+    sessions = list(_read_json(SESSIONS_PATH, []))
     sessions.append(record)
     _write_json(SESSIONS_PATH, sessions)
     return record
@@ -94,7 +110,7 @@ def update_session(session_id: str, changes: Mapping[str, object]) -> None:
             "PATCH", "math_sessions", query=f"?id=eq.{encoded}", payload=dict(changes)
         )
         return
-    sessions = list_sessions()
+    sessions = list(_read_json(SESSIONS_PATH, []))
     for session in sessions:
         if session.get("id") == session_id:
             session.update(changes)
@@ -103,29 +119,47 @@ def update_session(session_id: str, changes: Mapping[str, object]) -> None:
     raise StorageError("수정할 학습 기록을 찾지 못했습니다.")
 
 
-def load_settings() -> dict:
+def _settings_path(profile_id: str) -> Path:
+    if profile_id == DEFAULT_PROFILE_ID:
+        return SETTINGS_PATH
+    return SETTINGS_PATH.with_name(f"{SETTINGS_PATH.stem}_{profile_id}{SETTINGS_PATH.suffix}")
+
+
+def load_settings(profile_id: str = DEFAULT_PROFILE_ID) -> dict:
+    normalized_profile = normalize_profile_id(profile_id)
+    if not normalized_profile:
+        raise StorageError("학습자를 연서 또는 하은으로 선택해 주세요.")
     if storage_mode() == "supabase":
         rows = _supabase_request(
-            "GET", "math_settings", query="?id=eq.family&select=settings"
+            "GET", "math_settings", query=f"?id=eq.{normalized_profile}&select=settings"
         )
+        if not rows and normalized_profile == DEFAULT_PROFILE_ID:
+            rows = _supabase_request(
+                "GET", "math_settings", query="?id=eq.family&select=settings"
+            )
         if rows:
             return normalized_settings(rows[0].get("settings", {}))
         return dict(DEFAULT_SETTINGS)
-    return normalized_settings(_read_json(SETTINGS_PATH, DEFAULT_SETTINGS))
+    return normalized_settings(_read_json(_settings_path(normalized_profile), DEFAULT_SETTINGS))
 
 
-def save_settings(settings: Mapping[str, object]) -> dict:
+def save_settings(
+    settings: Mapping[str, object], profile_id: str = DEFAULT_PROFILE_ID
+) -> dict:
+    normalized_profile = normalize_profile_id(profile_id)
+    if not normalized_profile:
+        raise StorageError("학습자를 연서 또는 하은으로 선택해 주세요.")
     config = normalized_settings(settings)
     if storage_mode() == "supabase":
         _supabase_request(
             "POST",
             "math_settings",
             payload={
-                "id": "family",
+                "id": normalized_profile,
                 "settings": config,
                 "updated_at": datetime.now().astimezone().isoformat(),
             },
         )
     else:
-        _write_json(SETTINGS_PATH, config)
+        _write_json(_settings_path(normalized_profile), config)
     return config

@@ -6,6 +6,7 @@ from urllib import error, parse, request
 
 from app_config import setting
 from arithmetic import DOMAIN_LABELS, LEVELS
+from profiles import profile_name
 
 
 class TelegramNotificationError(RuntimeError):
@@ -33,6 +34,7 @@ def build_result_message(session: Mapping[str, object]) -> str:
     return "\n".join(
         [
             "🧮 오늘의 연산 10분 학습 결과",
+            f"👧 학습자: {profile_name(session.get('profile_id'))}",
             f"📅 날짜: {session.get('local_date', '-')}",
             f"📚 영역: {DOMAIN_LABELS.get(str(session.get('domain')), '-')}",
             f"✏️ 단계: {LEVELS[final_level].name}",

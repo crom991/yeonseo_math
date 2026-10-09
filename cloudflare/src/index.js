@@ -7,6 +7,7 @@ import {
   normalizedSettings,
   summarizeSession,
 } from "../public/learning.js";
+import { DEFAULT_PROFILE_ID, PROFILES, normalizeProfileId, profileName } from "../public/profiles.js";
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" };
 const SECURITY_HEADERS = {
@@ -84,12 +85,16 @@ async function constantTimeEquals(left, right) {
   return difference === 0;
 }
 
-export async function createParentSession(secret, now = Date.now()) {
-  const payload = textBase64url(JSON.stringify({ exp: Math.floor(now / 1000) + PARENT_SESSION_SECONDS }));
+export async function createParentSession(secret, now = Date.now(), profileId = DEFAULT_PROFILE_ID) {
+  const normalizedProfile = normalizeProfileId(profileId) || DEFAULT_PROFILE_ID;
+  const payload = textBase64url(JSON.stringify({
+    exp: Math.floor(now / 1000) + PARENT_SESSION_SECONDS,
+    profileId: normalizedProfile,
+  }));
   return `${payload}.${await hmac(payload, secret)}`;
 }
 
-export async function verifyParentSession(token, secret, now = Date.now()) {
+export async function parentProfileFromSession(token, secret, now = Date.now()) {
   if (!token || !secret) return false;
   const [payload, signature, extra] = token.split(".");
   if (!payload || !signature || extra) return false;
@@ -98,10 +103,15 @@ export async function verifyParentSession(token, secret, now = Date.now()) {
   try {
     const normalized = payload.replaceAll("-", "+").replaceAll("_", "/");
     const decoded = JSON.parse(atob(normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=")));
-    return Number(decoded.exp) > Math.floor(now / 1000);
+    if (Number(decoded.exp) <= Math.floor(now / 1000)) return null;
+    return normalizeProfileId(decoded.profileId) || DEFAULT_PROFILE_ID;
   } catch {
-    return false;
+    return null;
   }
+}
+
+export async function verifyParentSession(token, secret, now = Date.now()) {
+  return Boolean(await parentProfileFromSession(token, secret, now));
 }
 
 function cookieValue(request, name) {
@@ -114,16 +124,23 @@ function cookieValue(request, name) {
 }
 
 async function requireParent(request, env) {
-  return verifyParentSession(cookieValue(request, PARENT_COOKIE), env.SESSION_SECRET || "");
+  return parentProfileFromSession(cookieValue(request, PARENT_COOKIE), env.SESSION_SECRET || "");
 }
 
 function kstDate(now = new Date()) {
   return new Date(now.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
 
+function requiredProfileId(value) {
+  const profileId = normalizeProfileId(value);
+  if (!profileId) throw new Error("학습자를 연서 또는 하은으로 선택해 주세요.");
+  return profileId;
+}
+
 function parseSessionRow(row) {
   return {
     id: row.id,
+    profileId: normalizeProfileId(row.profile_id) || DEFAULT_PROFILE_ID,
     completedAt: row.completed_at,
     localDate: row.local_date,
     domain: row.domain,
@@ -140,15 +157,18 @@ function parseSessionRow(row) {
   };
 }
 
-async function listSessions(env, limit = 500) {
+async function listSessions(env, profileId, limit = 500) {
   const result = await env.DB.prepare(
-    "SELECT * FROM (SELECT * FROM sessions ORDER BY completed_at DESC LIMIT ?1) ORDER BY completed_at ASC",
-  ).bind(limit).all();
+    "SELECT * FROM (SELECT * FROM sessions WHERE profile_id = ?1 ORDER BY completed_at DESC LIMIT ?2) ORDER BY completed_at ASC",
+  ).bind(profileId, limit).all();
   return (result.results || []).map(parseSessionRow);
 }
 
-async function loadSettings(env) {
-  const row = await env.DB.prepare("SELECT settings_json FROM settings WHERE id = 'family'").first();
+async function loadSettings(env, profileId) {
+  let row = await env.DB.prepare("SELECT settings_json FROM settings WHERE id = ?1").bind(profileId).first();
+  if (!row && profileId === DEFAULT_PROFILE_ID) {
+    row = await env.DB.prepare("SELECT settings_json FROM settings WHERE id = 'family'").first();
+  }
   if (!row) return normalizedSettings(DEFAULT_SETTINGS);
   try {
     return normalizedSettings(JSON.parse(row.settings_json));
@@ -180,6 +200,7 @@ function publicSession(session) {
 
 async function saveSession(request, env) {
   const body = await readJson(request);
+  const profileId = requiredProfileId(body.profileId);
   const records = sanitizedRecords(body.records);
   const elapsedSeconds = Math.max(0, Math.min(600, Math.trunc(Number(body.elapsedSeconds || 0))));
   const summary = summarizeSession(records, elapsedSeconds);
@@ -194,6 +215,7 @@ async function saveSession(request, env) {
   const localDate = kstDate();
   const record = {
     id,
+    profileId,
     completedAt,
     localDate,
     domain: summary.domain,
@@ -211,12 +233,12 @@ async function saveSession(request, env) {
   };
   await env.DB.prepare(
     `INSERT INTO sessions (
-      id, edit_token_hash, completed_at, local_date, domain, start_level, final_level,
+      id, profile_id, edit_token_hash, completed_at, local_date, domain, start_level, final_level,
       recommended_level, attempted, correct, accuracy, elapsed_seconds, feeling,
       telegram_sent_at, records_json
-    ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, '', NULL, ?13)`,
+    ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, '', NULL, ?14)`,
   ).bind(
-    id, editTokenHash, completedAt, localDate, summary.domain, startLevel, finalLevel,
+    id, profileId, editTokenHash, completedAt, localDate, summary.domain, startLevel, finalLevel,
     summary.recommendedLevel, summary.attempted, summary.correct, record.accuracy,
     elapsedSeconds, JSON.stringify(records),
   ).run();
@@ -255,6 +277,7 @@ export function buildResultMessage(session) {
   const recommendedLevel = Number(session.recommendedLevel || finalLevel);
   return [
     "🧮 오늘의 연산 10분 학습 결과",
+    `👧 학습자: ${profileName(session.profileId)}`,
     `📅 날짜: ${session.localDate || "-"}`,
     `📚 영역: ${DOMAIN_LABELS[session.domain] || "-"}`,
     `✏️ 단계: ${LEVELS[finalLevel]?.name || "-"}`,
@@ -287,39 +310,52 @@ async function sendTelegram(request, env, id) {
 }
 
 async function parentLogin(request, env) {
-  if (!env.PARENT_PIN || !env.SESSION_SECRET) return errorJson("부모 인증 설정이 필요합니다.", 503);
+  if ((!env.PARENT_PIN && !env.HAEUN_PARENT_PIN) || !env.SESSION_SECRET) {
+    return errorJson("부모 인증 설정이 필요합니다.", 503);
+  }
   const body = await readJson(request);
-  const valid = await constantTimeEquals(String(body.pin || "").slice(0, 40), env.PARENT_PIN);
-  if (!valid) return errorJson("PIN이 맞지 않습니다.", 401);
-  const token = await createParentSession(env.SESSION_SECRET);
+  const entered = String(body.pin || "").slice(0, 40);
+  const [yeonseoMatch, haeunMatch] = await Promise.all([
+    constantTimeEquals(entered, env.PARENT_PIN || "__disabled_yeonseo__"),
+    constantTimeEquals(entered, env.HAEUN_PARENT_PIN || "__disabled_haeun__"),
+  ]);
+  if (!yeonseoMatch && !haeunMatch) return errorJson("PIN이 맞지 않습니다.", 401);
+  if (yeonseoMatch && haeunMatch) return errorJson("두 부모 PIN은 서로 다르게 설정해 주세요.", 503);
+  const profileId = haeunMatch ? "haeun" : "yeonseo";
+  const token = await createParentSession(env.SESSION_SECRET, Date.now(), profileId);
   return responseJson(
-    { authenticated: true },
+    { authenticated: true, profileId },
     200,
     { "set-cookie": `${PARENT_COOKIE}=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${PARENT_SESSION_SECONDS}` },
   );
 }
 
 async function parentState(request, env) {
-  if (!(await requireParent(request, env))) return errorJson("부모 인증이 필요합니다.", 401);
-  const [sessions, settings] = await Promise.all([listSessions(env), loadSettings(env)]);
-  return responseJson({ sessions: sessions.map(publicSession), settings });
+  const profileId = await requireParent(request, env);
+  if (!profileId) return errorJson("부모 인증이 필요합니다.", 401);
+  const [sessions, settings] = await Promise.all([listSessions(env, profileId), loadSettings(env, profileId)]);
+  return responseJson({ profileId, profile: PROFILES[profileId], sessions: sessions.map(publicSession), settings });
 }
 
 async function saveParentSettings(request, env) {
-  if (!(await requireParent(request, env))) return errorJson("부모 인증이 필요합니다.", 401);
+  const profileId = await requireParent(request, env);
+  if (!profileId) return errorJson("부모 인증이 필요합니다.", 401);
   const settings = normalizedSettings(await readJson(request));
   await env.DB.prepare(
-    `INSERT INTO settings (id, settings_json, updated_at) VALUES ('family', ?1, ?2)
+    `INSERT INTO settings (id, settings_json, updated_at) VALUES (?1, ?2, ?3)
      ON CONFLICT(id) DO UPDATE SET settings_json = excluded.settings_json, updated_at = excluded.updated_at`,
-  ).bind(JSON.stringify(settings), new Date().toISOString()).run();
+  ).bind(profileId, JSON.stringify(settings), new Date().toISOString()).run();
   return responseJson({ settings });
 }
 
 async function apiRouter(request, env, url) {
   if (request.method === "GET" && url.pathname === "/api/bootstrap") {
-    const [sessions, settings] = await Promise.all([listSessions(env), loadSettings(env)]);
+    const profileId = requiredProfileId(url.searchParams.get("profile"));
+    const [sessions, settings] = await Promise.all([listSessions(env, profileId), loadSettings(env, profileId)]);
     const nextLevel = chooseStartLevel(sessions, settings);
     return responseJson({
+      profileId,
+      profileName: profileName(profileId),
       nextLevel,
       nextStudyLabel: `오늘은 ${DOMAIN_LABELS[LEVELS[nextLevel].domain]} · ${LEVELS[nextLevel].name}부터 시작해요.`,
       telegramConfigured: Boolean(env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID),

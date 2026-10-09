@@ -1,6 +1,6 @@
 # 오늘의 연산 10분
 
-초등학교 5학년 학습자가 모바일에서 하루 약 10분씩 기초 연산을 연습하는 Streamlit 웹앱입니다. 한 화면에 한 문제만 보여 주며, 연습을 마치면 점수·시간·체감 난이도를 저장하고 부모에게 Telegram으로 보낼 수 있습니다.
+두 명의 초등학생이 모바일에서 하루 약 10분씩 기초 연산을 연습하는 웹앱입니다. 로그인 없이 `연서 / 하은` 프로필을 선택하며, 각자의 기록과 난이도 설정은 서로 섞이지 않습니다.
 
 ## 공개 서비스
 
@@ -13,6 +13,7 @@ Cloudflare 무료 배포판은 `cloudflare/`에 구축했다. 정적 화면은 �
 ## 핵심 기능
 
 - 두 자리 수 덧셈에서 시작해 뺄셈·곱셈·나눗셈·소수·분수로 확장하는 17단계
+- 로그인 없이 연서·하은 프로필을 선택하고 기록·진도·설정을 아이별로 분리
 - 최근 풀이와 아이의 `쉬웠어요 / 딱 좋았어요 / 어려웠어요` 응답을 함께 반영하는 난이도 조절
 - 한 영역을 충분히 연습하면 다음 영역을 열고, 열린 영역 중 덜 연습한 영역을 우선 배정
 - 부모 PIN으로 보호된 날짜별 기록·정확도 추이·학습 설정 화면
@@ -27,13 +28,13 @@ python -m pip install -r requirements.txt
 python -m streamlit run app.py
 ```
 
-로컬에서 부모 화면을 시험하려면 `PARENT_PIN` 환경 변수를 설정합니다. 비밀값은 코드나 문서에 기록하지 않습니다.
+로컬에서 부모 화면을 시험하려면 연서용 `PARENT_PIN`과 하은용 `HAEUN_PARENT_PIN` 환경 변수를 설정합니다. 비밀값은 코드나 문서에 기록하지 않습니다.
 
 ## 테스트
 
 ```powershell
 python -m unittest discover -s tests -v
-python -m compileall -q app.py app_config.py arithmetic.py curriculum.py notifications.py storage.py pages tests
+python -m compileall -q app.py app_config.py arithmetic.py curriculum.py notifications.py profiles.py storage.py pages tests
 ```
 
 Cloudflare 배포판은 다음처럼 확인한다.
@@ -52,6 +53,7 @@ Streamlit Secrets에 다음 이름을 등록합니다. 실제 값은 Git에 올�
 - `TELEGRAM_BOT_TOKEN`
 - `TELEGRAM_CHAT_ID`
 - `PARENT_PIN`
+- `HAEUN_PARENT_PIN`
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 

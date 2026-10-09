@@ -18,10 +18,22 @@ class LocalStorageTests(unittest.TestCase):
                 saved = storage.save_session(
                     {"local_date": "2026-10-04", "domain": "addition", "accuracy": 80}
                 )
+                storage.save_session(
+                    {
+                        "profile_id": "haeun",
+                        "local_date": "2026-10-05",
+                        "domain": "multiplication",
+                        "accuracy": 90,
+                    }
+                )
                 storage.update_session(saved["id"], {"feeling": "normal"})
                 sessions = storage.list_sessions()
                 self.assertEqual(len(sessions), 1)
                 self.assertEqual(sessions[0]["feeling"], "normal")
+                self.assertEqual(len(storage.list_sessions("haeun")), 1)
+                self.assertEqual(
+                    storage.list_sessions("haeun")[0]["domain"], "multiplication"
+                )
 
                 config = storage.save_settings(
                     {
@@ -33,6 +45,7 @@ class LocalStorageTests(unittest.TestCase):
                 )
                 self.assertEqual(config["forced_level"], 9)
                 self.assertEqual(storage.load_settings()["focus_domain"], "multiplication")
+                self.assertEqual(storage.load_settings("haeun")["focus_domain"], "addition")
 
 
 if __name__ == "__main__":
