@@ -277,6 +277,7 @@
 - 기존 운영 기록 4건이 모두 `yeonseo`로 보존된 것을 읽기 전용 조회로 확인
 - Cloudflare Secret `HAEUN_PARENT_PIN` 등록 완료(실제 값은 문서·Git에 기록하지 않음)
 - Cloudflare 운영판 배포 완료: 버전 `fd6ae136-7fbc-4fed-9683-d3240ec345c9`
+- 기능 커밋 [`9834b2d`](https://github.com/crom991/yeonseo_math/commit/9834b2df11a478e7627ada42f3d4788c7459eecf)을 GitHub `main`에 반영하고 원격 SHA 일치 확인
 - 공개 첫 화면에서 연서·하은 선택 카드 표시 확인
 - 공개 부모 화면에서 하은용 PIN 입력 시 `하은 부모용 학습 기록`만 열리는 것 확인
 - 공개 하은 부모 화면 로그아웃 뒤 PIN 입력 화면으로 다시 잠기는 것 확인
