@@ -234,3 +234,10 @@
 - 운영 주소, Workers·D1 구조, Secret 이름, 기능·검증 결과, Git 기준점, 다음 운영 작업을 한글로 기록
 - Secret 실제 값은 기록하지 않고 `PARENT_PIN`, `SESSION_SECRET`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` 이름만 기록
 - 수정 뒤 대상 페이지와 상위 `연서 수학연산 자료` 페이지를 다시 조회해 새 섹션 저장과 하위 페이지 연결 유지 확인
+
+## 2026-10-09 · Telegram 연산 웹페이지 링크 추가
+
+- `아빠에게 학습 결과 보내기` 메시지의 마지막에 Cloudflare 연산 웹페이지 링크를 추가
+- 학습 요약과 링크 사이에 빈 줄을 두어 Telegram에서 쉽게 찾고 누를 수 있도록 구성
+- Cloudflare 운영판과 기존 Streamlit 전송 문구를 같은 형식으로 맞춤
+- Node·Python 자동 테스트로 메시지 마지막 줄의 운영 주소를 검증

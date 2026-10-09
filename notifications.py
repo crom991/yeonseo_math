@@ -18,6 +18,7 @@ FEELING_LABELS = {
     "hard": "어려웠어요",
     "": "선택하지 않음",
 }
+APP_URL = "https://yeonseo-math.exambreaker-dev.workers.dev/"
 
 
 def telegram_is_configured() -> bool:
@@ -40,6 +41,8 @@ def build_result_message(session: Mapping[str, object]) -> str:
             f"⏱ 학습 시간: {minutes}분 {seconds}초",
             f"🙂 오늘 느낌: {feeling}",
             f"➡️ 다음 권장: {LEVELS[int(session.get('recommended_level', final_level))].name}",
+            "",
+            f"🔗 연산 웹페이지: {APP_URL}",
         ]
     )
 

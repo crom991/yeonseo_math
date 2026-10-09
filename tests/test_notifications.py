@@ -22,6 +22,11 @@ class NotificationTests(unittest.TestCase):
         self.assertIn("정답: 8/10개", message)
         self.assertIn("딱 좋았어요", message)
         self.assertIn("10분 0초", message)
+        self.assertTrue(
+            message.endswith(
+                "🔗 연산 웹페이지: https://yeonseo-math.exambreaker-dev.workers.dev/"
+            )
+        )
 
 
 if __name__ == "__main__":

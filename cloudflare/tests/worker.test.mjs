@@ -25,4 +25,5 @@ test("Telegram 결과 메시지에 핵심 학습 정보를 담는다", () => {
   assert.match(message, /정답: 8\/10개/);
   assert.match(message, /딱 좋았어요/);
   assert.match(message, /10분 0초/);
+  assert.match(message, /\n\n🔗 연산 웹페이지: https:\/\/yeonseo-math\.exambreaker-dev\.workers\.dev\/$/);
 });

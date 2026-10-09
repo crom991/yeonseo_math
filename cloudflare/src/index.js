@@ -17,6 +17,7 @@ const SECURITY_HEADERS = {
   "permissions-policy": "camera=(), microphone=(), geolocation=()",
 };
 const FEELING_LABELS = { easy: "쉬웠어요", normal: "딱 좋았어요", hard: "어려웠어요", "": "선택하지 않음" };
+const APP_URL = "https://yeonseo-math.exambreaker-dev.workers.dev/";
 const PARENT_COOKIE = "parent_session";
 const PARENT_SESSION_SECONDS = 8 * 60 * 60;
 
@@ -262,6 +263,8 @@ export function buildResultMessage(session) {
     `⏱ 학습 시간: ${minutes}분 ${seconds}초`,
     `🙂 오늘 느낌: ${FEELING_LABELS[session.feeling || ""] || "선택하지 않음"}`,
     `➡️ 다음 권장: ${LEVELS[recommendedLevel]?.name || "-"}`,
+    "",
+    `🔗 연산 웹페이지: ${APP_URL}`,
   ].join("\n");
 }
 
